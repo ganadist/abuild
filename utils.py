@@ -10,14 +10,17 @@ def checkAndroidSourceTop(directory):
 	envsetup = os.path.sep.join(('', 'build', 'envsetup.sh'))
 	if not os.access(directory + envsetup, os.R_OK):
 		return False
-
 	return True
 
+def buildCmdArgs(script):
+	script = "source build/envsetup.sh > /dev/null;" + script
+	return (SHELL, "-c", script)
+
 def getShellOutput(directory, script):
-	script = "source build/envsetup.sh > /dev/null;"%{"directory" :directory} + script
-	cmd = (SHELL, "-c", script)
+	cmd = buildCmdArgs(script)
 	return subprocess.Popen(cmd, cwd = directory,
 			stdout=subprocess.PIPE,
+			stderr=subprocess.PIPE,
 			close_fds=True).stdout.read()
 	
 def getProductsList(directory):
