@@ -32,6 +32,8 @@ class MainWindow:
 		self.pid = None
 		self.win.show_all()
 
+		self.set_ui_enable(False)
+
 	def choose_source_top(self, chooser):
 		directory = chooser.get_filename()
 		self.set_source_top(directory)

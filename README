@@ -1,0 +1,20 @@
+* What is this?
+	- This program is simple android build tool 
+	  with gtk front-end
+
+* Requirements
+	- python 2.6 or higher
+	- pygobject 2.90 or higher
+	- gtk 3.0 or higher with gobject-introspection
+	- vte 2.90 or higher with gobject-introspection
+
+* How to run?
+	- change directory to source
+	- run ./abuild
+	 . need to fix for deployment
+	- click "Source Top" button and select android source directory
+	- if source directory has valid contents, "Build", "Product",
+	  "Variant" button will be enabled
+	  . TIP: If you set TOP shell environment and that is android
+	    source directory, it will be set as "Source Top" directory
+	- select check buttons and press "Build" button
