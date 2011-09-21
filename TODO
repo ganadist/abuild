@@ -1,0 +1,8 @@
+* Polish user interface
+* Clean up codes
+* Build queue support
+* Repo integreation
+* Remote build support
+ - use broadway backend
+ - or ssh backend
+* Save last status and settings
