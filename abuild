@@ -1,12 +1,19 @@
 #!/usr/bin/env python
 
+import gi
+gi.require_version("Gtk", "3.0")
 from gi.repository import GLib, GObject, Gtk
 
-def checkKeyboardInterrupt():
-	return True
+import os
+import utils
 
 if __name__ == '__main__':
 	from MainWindow import MainWindow
 	win = MainWindow()
-	GLib.timeout_add(200, checkKeyboardInterrupt)
+
+	for directory in (os.environ.get('TOP', ''), os.getcwd()):
+		if directory and win.set_source_top(directory):
+			win.set_choose_directory(directory)
+			break
+
 	Gtk.main()
