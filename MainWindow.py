@@ -58,6 +58,7 @@ class MainWindow:
 			self.set_ui_enable(False)
 			return False
 		combo = self.ui.get_object("combobox_product")
+		combo.remove_all()
 		for product in products:
 			combo.append_text(product)
 		combo.set_active(0)
@@ -88,15 +89,11 @@ class MainWindow:
 		self.toggle_column_enable(path)
 
 	def stop_build(self):
-		self.build_btn.set_label("Build")
 		if self.pid:
 			import signal
 			os.kill(self.pid, signal.SIGTERM)
 
-	def run_build(self):
-		self.build_btn.set_label("Stop")
-		self.terminal.reset(True, True)
-
+	def build_script(self):
 		product = self.ui.get_object("combobox_product").get_active_text()
 		variant = self.ui.get_object("combobox_variant").get_active_text()
 		script = "lunch %s-%s"%(product, variant)
@@ -112,6 +109,8 @@ class MainWindow:
 			make_opts.append("clean")
 		if self.ui.get_object("btn_verbose").get_active():
 			make_opts.append("showcommands")
+		if self.ui.get_object("btn_odex").get_active():
+			make_opts.append("WITH_DEXPREOPT=true")
 
 		model = self.ui.get_object("liststore_rules")
 		def model_iter(model, path, iter, user_data):
@@ -121,7 +120,16 @@ class MainWindow:
 
 		model.foreach(model_iter, None)
 
-		script += ";" + "make bootimage " + " ".join(make_opts)
+		script += ";" + "make " + " ".join(make_opts)
+
+		return script
+
+	def run_build(self):
+		self.build_btn.set_label("Stop")
+		self.ui.get_object("spinner1").start();
+		self.terminal.reset(True, True)
+
+		script = self.build_script()
 		print 'run:', script
 		success, pid = self.terminal.fork_command_full(
 			Vte.PtyFlags.NO_WTMP |
@@ -133,9 +141,13 @@ class MainWindow:
 			GLib.SpawnFlags.SEARCH_PATH, None, None)
 		self.pid = pid
 
+		self.ui.get_object("notebook1").set_current_page(3)
+
 	def build_terminated(self, terminal):
 		print terminal.get_child_exit_status()
 		#pid, status = os.waitpid(self.pid, os.WNOHANG)
 		#print pid, status
 		self.pid = None
 		self.build_btn.set_active(False)
+		self.ui.get_object("spinner1").stop();
+		self.build_btn.set_label("Build")
