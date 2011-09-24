@@ -31,6 +31,11 @@ def get_product_list(directory):
 		p, variant = item.split('-')
 		if not p in products: products.append(p)
 	return products
+
+def build_lunch(product, variant):
+	script = "lunch %s-%s"%(product, variant)
+	script += ";" + "export OUT_DIR=" + "-".join(("out", product, variant))
+	return script
 	
 if __name__ == '__main__':
 	print check_source_top(sys.argv[1])

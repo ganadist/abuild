@@ -3,6 +3,7 @@ import utils
 import os, sys
 
 COL_ENABLE, COL_RULE, COL_DESCRITION = range(3)
+COL_PRODUCT, COL_VARIANT, COL_SCRIPT, COL_TIME = range(4)
 
 class MainWindow:
 	def __init__(self):
@@ -20,6 +21,9 @@ class MainWindow:
 		self.build_btn = self.ui.get_object("btn_build")
 		self.build_btn.connect("toggled", self.toggle_btn_build)
 
+		self.queue_btn = self.ui.get_object("btn_queue_add")
+		self.queue_btn.connect("clicked", self.add_queue)
+
 		treeview = self.ui.get_object("treeview_rules")
 		treeview.connect("row-activated", self.activate_rule_row)
 		renderer = self.ui.get_object("renderer_enable")
@@ -27,7 +31,18 @@ class MainWindow:
 
 		chooser = self.ui.get_object("chooser_source_top")
 		chooser.connect("file-set", self.choose_source_top)
-		chooser.connect("file-set", self.choose_source_top)
+
+		model = self.ui.get_object("liststore_queue")
+
+		treeview = self.ui.get_object("treeview_queue")
+		treeview.connect("cursor-changed", self.queue_cursor_changed, model)
+
+		self.ui.get_object("btn_queue_remove").connect("clicked",
+				self.remove_queue, treeview, model)
+		self.ui.get_object("btn_queue_move_up").connect("clicked",
+				self.move_up_queue, treeview, model)
+		self.ui.get_object("btn_queue_move_down").connect("clicked",
+				self.move_down_queue, treeview, model)
 
 		self.pid = None
 		self.win.show_all()
@@ -71,7 +86,10 @@ class MainWindow:
 
 	def toggle_btn_build(self, button):
 		if button.get_active():
-			self.run_build()
+			product = self.ui.get_object("combobox_product").get_active_text()
+			variant = self.ui.get_object("combobox_variant").get_active_text()
+			script = self.build_make_opts()
+			self.run_build(product, variant, script)
 		else:
 			self.stop_build()
 		return True
@@ -93,15 +111,8 @@ class MainWindow:
 			import signal
 			os.kill(self.pid, signal.SIGTERM)
 
-	def build_script(self):
-		product = self.ui.get_object("combobox_product").get_active_text()
-		variant = self.ui.get_object("combobox_variant").get_active_text()
-		script = "lunch %s-%s"%(product, variant)
-		script += ";" + "export OUT_DIR=" + "-".join(("out", product, variant))
-		if self.ui.get_object("btn_ccache").get_active():
-			script += ";" + "export USE_CCACHE=1"
+	def build_make_opts(self):
 		make_opts = []
-
 		if self.ui.get_object("btn_parallel_build").get_active():
 			cpus = os.sysconf("SC_NPROCESSORS_ONLN")
 			make_opts.append("-j%d"%(cpus + 1))
@@ -111,6 +122,8 @@ class MainWindow:
 			make_opts.append("showcommands")
 		if self.ui.get_object("btn_odex").get_active():
 			make_opts.append("WITH_DEXPREOPT=true")
+		if self.ui.get_object("btn_ccache").get_active():
+			make_opts.append("USE_CCACHE=1")
 
 		model = self.ui.get_object("liststore_rules")
 		def model_iter(model, path, iter, user_data):
@@ -119,17 +132,81 @@ class MainWindow:
 				make_opts.append(rule)
 
 		model.foreach(model_iter, None)
+		return "make " + " ".join(make_opts)
 
-		script += ";" + "make " + " ".join(make_opts)
 
+	def add_queue(self, button):
+		product = self.ui.get_object("combobox_product").get_active_text()
+		variant = self.ui.get_object("combobox_variant").get_active_text()
+		script = self.build_make_opts()
+		model = self.ui.get_object("liststore_queue")
+
+		treeiter = model.insert(0)
+
+		for col, value in ((COL_PRODUCT, product),
+				(COL_VARIANT, variant),
+				(COL_SCRIPT, script),
+				(COL_TIME, 0)):
+			model.set_value(treeiter, col, value)
+
+	def remove_queue(self, button, treeview, model):
+		path, col = treeview.get_cursor()
+		iter = model.get_iter(path)
+
+		model.remove(iter)
+
+		for name in ("remove", "move_up", "move_down"):
+			self.ui.get_object("btn_queue_"+name).set_sensitive(False)
+
+	def move_up_queue(self, button, treeview, model):
+		path, col = treeview.get_cursor()
+		iter = model.get_iter(path)
+
+		prev = path.copy()
+		if prev.prev():
+			model.swap(iter, model.get_iter(prev) )
+			self.queue_cursor_changed(treeview, model)
+
+	def move_down_queue(self, button, treeview, model):
+		path, col = treeview.get_cursor()
+		iter = model.get_iter(path)
+
+		next = path.copy()
+		next.next()
+
+		model.swap(iter, model.get_iter(next) )
+		self.queue_cursor_changed(treeview, model)
+
+	def queue_cursor_changed(self, treeview, model):
+		path, col = treeview.get_cursor()
+		if not col:
+			for name in ("remove", "move_up", "move_down"):
+				self.ui.get_object("btn_queue_"+name).set_sensitive(False)
+			return
+
+		self.ui.get_object("btn_queue_remove").set_sensitive(True)
+
+		prev = path.copy()
+		self.ui.get_object("btn_queue_move_up").set_sensitive(prev.prev())
+
+		iter = model.get_iter(path)
+		next = bool(model.iter_next(iter))
+		self.ui.get_object("btn_queue_move_down").set_sensitive(next)
+
+	def build_script(self):
+		product = self.ui.get_object("combobox_product").get_active_text()
+		variant = self.ui.get_object("combobox_variant").get_active_text()
+		script = utils.build_lunch(product, variant)
+		script += ";" + self.build_make_opts()
 		return script
 
-	def run_build(self):
+	def run_build(self, product, variant, script):
 		self.build_btn.set_label("Stop")
 		self.ui.get_object("spinner1").start();
 		self.terminal.reset(True, True)
 
-		script = self.build_script()
+		script = utils.build_lunch(product, variant) + ";" + script
+
 		print 'run:', script
 		success, pid = self.terminal.fork_command_full(
 			Vte.PtyFlags.NO_WTMP |
@@ -144,9 +221,19 @@ class MainWindow:
 		self.ui.get_object("notebook1").set_current_page(3)
 
 	def build_terminated(self, terminal):
-		print terminal.get_child_exit_status()
-		#pid, status = os.waitpid(self.pid, os.WNOHANG)
-		#print pid, status
+		status = terminal.get_child_exit_status()
+		if status == 0:
+			model = self.ui.get_object("liststore_queue")
+			iter = model.get_iter_first()
+			if iter:
+				product, variant, script = model.get(iter,
+					COL_PRODUCT, COL_VARIANT, COL_SCRIPT)
+				self.run_build(product, variant, script)
+				model.remove(iter)
+				return
+		else:
+			# handle error
+			pass
 		self.pid = None
 		self.build_btn.set_active(False)
 		self.ui.get_object("spinner1").stop();
