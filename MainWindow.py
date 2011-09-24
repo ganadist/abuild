@@ -3,7 +3,7 @@ import utils
 import os, sys
 
 COL_ENABLE, COL_RULE, COL_DESCRITION = range(3)
-COL_PRODUCT, COL_VARIANT, COL_SCRIPT, COL_TIME = range(4)
+COL_PRODUCT, COL_VARIANT, COL_SCRIPT, COL_TIME, COL_SOURCE = range(5)
 
 class MainWindow:
 	def __init__(self):
@@ -91,7 +91,8 @@ class MainWindow:
 			product = self.ui.get_object("combobox_product").get_active_text()
 			variant = self.ui.get_object("combobox_variant").get_active_text()
 			script = self.build_make_opts()
-			self.run_build(product, variant, script)
+			directory = self.sourceTop
+			self.run_build(directory, product, variant, script)
 		else:
 			self.stop_build()
 		return True
@@ -142,13 +143,15 @@ class MainWindow:
 		variant = self.ui.get_object("combobox_variant").get_active_text()
 		script = self.build_make_opts()
 		model = self.ui.get_object("liststore_queue")
+		directory = self.sourceTop
 
 		treeiter = model.insert(0)
 
 		for col, value in ((COL_PRODUCT, product),
 				(COL_VARIANT, variant),
 				(COL_SCRIPT, script),
-				(COL_TIME, 0)):
+				(COL_TIME, 0),
+				(COL_SOURCE, directory)):
 			model.set_value(treeiter, col, value)
 
 	def remove_queue(self, button, treeview, model):
@@ -196,16 +199,18 @@ class MainWindow:
 		self.ui.get_object("btn_queue_move_down").set_sensitive(next)
 
 	def retry_build(self, button):
+		source = self.ui.get_object("label_source").get_text()
 		product = self.ui.get_object("label_product").get_text()
 		variant = self.ui.get_object("label_variant").get_text()
 		script = self.ui.get_object("label_command").get_text()
-		self.run_build(product, variant, script)
+		self.run_build(source, product, variant, script)
 
-	def run_build(self, product, variant, script):
+	def run_build(self, directory, product, variant, script):
 		self.build_btn.set_label("Stop")
 		self.ui.get_object("spinner1").start();
 		self.terminal.reset(True, True)
 
+		self.ui.get_object("label_source").set_text(directory)
 		self.ui.get_object("label_product").set_text(product)
 		self.ui.get_object("label_variant").set_text(variant)
 		self.ui.get_object("label_command").set_text(script)
@@ -217,7 +222,7 @@ class MainWindow:
 			Vte.PtyFlags.NO_WTMP |
 				Vte.PtyFlags.NO_UTMP |
 				Vte.PtyFlags.NO_LASTLOG,
-			self.sourceTop,
+			directory,
 			utils.build_cmd_args(script),
 			(),
 			GLib.SpawnFlags.SEARCH_PATH, None, None)
@@ -228,16 +233,17 @@ class MainWindow:
 
 	def build_terminated(self, terminal):
 		status = terminal.get_child_exit_status()
-		if status == 0:
+		if True or status == 0:
 			model = self.ui.get_object("liststore_queue")
 			iter = model.get_iter_first()
 			if iter:
-				product, variant, script = model.get(iter,
-					COL_PRODUCT, COL_VARIANT, COL_SCRIPT)
-				self.run_build(product, variant, script)
+				product, variant, script, directory = model.get(iter,
+					COL_PRODUCT, COL_VARIANT, COL_SCRIPT, COL_SOURCE)
+				self.run_build(directory, product, variant, script)
 				model.remove(iter)
 				return
 
+			self.ui.get_object("label_source").set_text("")
 			self.ui.get_object("label_product").set_text("")
 			self.ui.get_object("label_variant").set_text("")
 			self.ui.get_object("label_command").set_text("")
