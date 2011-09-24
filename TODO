@@ -1,7 +1,7 @@
 * Polish user interface
 * Polish deployment
 * Clean up codes
-* Build queue support
+* Scheduled Build support
 * Repo integreation
 * Remote build support
  - use broadway backend
