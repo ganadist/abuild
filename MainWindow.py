@@ -24,6 +24,8 @@ class MainWindow:
 		self.queue_btn = self.ui.get_object("btn_queue_add")
 		self.queue_btn.connect("clicked", self.add_queue)
 
+		self.ui.get_object("btn_retry").connect("clicked", self.retry_build)
+
 		treeview = self.ui.get_object("treeview_rules")
 		treeview.connect("row-activated", self.activate_rule_row)
 		renderer = self.ui.get_object("renderer_enable")
@@ -58,7 +60,7 @@ class MainWindow:
 		chooser.set_filename(directory)
 
 	def set_ui_enable(self, enable):
-		for name in ("btn_build", "combobox_product", "combobox_variant"):
+		for name in ("btn_build", "btn_queue_add", "combobox_product", "combobox_variant"):
 			w = self.ui.get_object(name)
 			w.set_sensitive(enable)
 
@@ -193,17 +195,20 @@ class MainWindow:
 		next = bool(model.iter_next(iter))
 		self.ui.get_object("btn_queue_move_down").set_sensitive(next)
 
-	def build_script(self):
-		product = self.ui.get_object("combobox_product").get_active_text()
-		variant = self.ui.get_object("combobox_variant").get_active_text()
-		script = utils.build_lunch(product, variant)
-		script += ";" + self.build_make_opts()
-		return script
+	def retry_build(self, button):
+		product = self.ui.get_object("label_product").get_text()
+		variant = self.ui.get_object("label_variant").get_text()
+		script = self.ui.get_object("label_command").get_text()
+		self.run_build(product, variant, script)
 
 	def run_build(self, product, variant, script):
 		self.build_btn.set_label("Stop")
 		self.ui.get_object("spinner1").start();
 		self.terminal.reset(True, True)
+
+		self.ui.get_object("label_product").set_text(product)
+		self.ui.get_object("label_variant").set_text(variant)
+		self.ui.get_object("label_command").set_text(script)
 
 		script = utils.build_lunch(product, variant) + ";" + script
 
@@ -219,6 +224,7 @@ class MainWindow:
 		self.pid = pid
 
 		self.ui.get_object("notebook1").set_current_page(3)
+		self.ui.get_object("btn_retry").set_sensitive(False);
 
 	def build_terminated(self, terminal):
 		status = terminal.get_child_exit_status()
@@ -231,10 +237,17 @@ class MainWindow:
 				self.run_build(product, variant, script)
 				model.remove(iter)
 				return
+
+			self.ui.get_object("label_product").set_text("")
+			self.ui.get_object("label_variant").set_text("")
+			self.ui.get_object("label_command").set_text("")
 		else:
 			# handle error
+			self.ui.get_object("btn_retry").set_sensitive(True);
 			pass
 		self.pid = None
 		self.build_btn.set_active(False)
 		self.ui.get_object("spinner1").stop();
 		self.build_btn.set_label("Build")
+
+
