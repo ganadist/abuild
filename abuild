@@ -1,4 +1,16 @@
 #!/usr/bin/env python
+import os
+run_remote = False
+if os.getenv("SSH_CONNECTION"):
+	# set broadway backend in remote connection
+	os.environ["GDK_BACKEND"] = 'broadway'
+
+if os.getenv("GDK_BACKEND") == 'broadway':
+	# These settings can kill application. so turn off
+	for name in ("GTK_IM_MODULE", "GTK_MODULES", "UBUNTU_MENUPROXY",):
+		del os.environ[name]
+	os.environ["LIBOVERLAY_SCROLLBAR"] = '0'
+	run_remote = True
 
 import gi
 gi.require_version("Gtk", "3.0")
