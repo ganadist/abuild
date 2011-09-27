@@ -12,12 +12,13 @@ def check_source_top(directory):
 		return False
 	return True
 
-def build_cmd_args(script):
-	script = "source build/envsetup.sh > /dev/null;" + script
+def build_cmd_args(script, envsetup = True):
+	if envsetup:
+		script = "source build/envsetup.sh > /dev/null;" + script
 	return (SHELL, "-c", script)
 
-def get_shell_output(directory, script):
-	cmd = build_cmd_args(script)
+def get_shell_output(directory, script, envsetup = True):
+	cmd = build_cmd_args(script, envsetup)
 	return subprocess.Popen(cmd, cwd = directory,
 			stdout=subprocess.PIPE,
 			stderr=subprocess.PIPE,

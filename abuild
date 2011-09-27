@@ -1,26 +1,30 @@
 #!/usr/bin/env python
 import os
-run_remote = False
+server_ip = None
 if os.getenv("SSH_CONNECTION"):
 	# set broadway backend in remote connection
 	os.environ["GDK_BACKEND"] = 'broadway'
+	from_ip, from_port, server_ip, server_port = os.getenv("SSH_CONNECTION").split()
 
 if os.getenv("GDK_BACKEND") == 'broadway':
-	# These settings can kill application. so turn off
+	# These modules can crash application.
+	# Because they use x11 specific backend directly.
 	for name in ("GTK_IM_MODULE", "GTK_MODULES", "UBUNTU_MENUPROXY",):
-		del os.environ[name]
+		if name in os.environ:
+			del os.environ[name]
 	os.environ["LIBOVERLAY_SCROLLBAR"] = '0'
-	run_remote = True
+	display = os.environ.get("BROADWAY_DISPLAY", "8080")
+
+	if server_ip:
+		print "open http://%s:%s with your browser"%(server_ip, display)
 
 import gi
 gi.require_version("Gtk", "3.0")
 from gi.repository import GLib, GObject, Gtk
 
-import os
-import utils
-
 if __name__ == '__main__':
 	from MainWindow import MainWindow
+	import utils
 	win = MainWindow()
 
 	for directory in (os.environ.get('TOP', ''), os.getcwd()):
