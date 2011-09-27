@@ -232,7 +232,7 @@ class MainWindow:
 
 	def build_terminated(self, terminal):
 		status = terminal.get_child_exit_status()
-		if True or status == 0:
+		if status == 0:
 			model = self.ui.get_object("liststore_queue")
 			iter = model.get_iter_first()
 			if iter:
