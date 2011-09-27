@@ -65,7 +65,6 @@ class MainWindow:
 			w.set_sensitive(enable)
 
 	def set_source_top(self, directory):
-		print 'set ', directory
 		if not utils.check_source_top(directory):
 			self.set_ui_enable(False)
 			return False

@@ -9,14 +9,17 @@ if os.getenv("SSH_CONNECTION"):
 if os.getenv("GDK_BACKEND") == 'broadway':
 	# These modules can crash application.
 	# Because they use x11 specific backend directly.
-	for name in ("GTK_IM_MODULE", "GTK_MODULES", "UBUNTU_MENUPROXY",):
+	for name in ("GTK_MODULES", "UBUNTU_MENUPROXY",):
 		if name in os.environ:
 			del os.environ[name]
 	os.environ["LIBOVERLAY_SCROLLBAR"] = '0'
+	os.environ["GTK_IM_MODULE"] = 'ibus'
 	display = os.environ.get("BROADWAY_DISPLAY", "8080")
 
-	if server_ip:
-		print "open http://%s:%s with your browser"%(server_ip, display)
+	if not server_ip:
+		# XXX
+		server_ip = "localhost"
+	print "open http://%s:%s with your browser"%(server_ip, display)
 
 import gi
 gi.require_version("Gtk", "3.0")
