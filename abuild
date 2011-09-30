@@ -29,6 +29,7 @@ default_hook = sys.excepthook
 def abuild_excepthook(exc_type, exc_obj, exc_tb):
 	if exc_type is KeyboardInterrupt:
 		Gtk.main_quit()
+		return False
 	return default_hook(exc_type, exc_obj, exc_tb)
 
 sys.excepthook = abuild_excepthook
